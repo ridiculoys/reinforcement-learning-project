@@ -4,6 +4,7 @@ import pickle
 
 BOARD_ROWS = 3
 BOARD_COLS = 3
+FILE_NUM = 'new'
 
 class State:
     def __init__(self, student, teacher):
@@ -17,7 +18,8 @@ class State:
 
     def play_game(self, iterations):
         for i in range(iterations):
-            print(f"Iteration: {i}")
+            if i % 10 == 0:
+                print(f"Iteration: {i}")
 
             self.reset()
             self.player1.game_begin()
@@ -46,7 +48,7 @@ class State:
                 game.display_board()
 
                 reward, self.isEndGame, self.winningSymbol = self.check_win('X' if isX else 'O')
-                print("reward: ", reward)
+                # print("reward: ", reward)
                 if self.isEndGame:
                     current_state = self.get_hash()
                     if reward == 0.5:
@@ -74,7 +76,7 @@ class State:
 
                 # isPlayer1 = not isPlayer1
                 isX = not isX
-        self.p1.save_policy()
+        self.player1.save_policy()
     
     # for q-table key
     def get_hash(self):
@@ -205,14 +207,18 @@ class QPlayer:
         return action
     
     def save_policy(self):
-        fw = open('q_student_policy', 'wb')
-        pickle.dump(self.q_table)
+        print("Saving policy...")
+        fw = open(f'q_student_policy_{FILE_NUM}', 'wb')
+        pickle.dump(self.q_table, fw)
         fw.close()
+        print("Successfully saved!")
     
     def load_policy(self, filename):
+        print("Loading policy...")
         fr = open(filename, 'rb')
         self.q_table = pickle.load(fr)
         fr.close()
+        print("Successfully loaded!")
 
 
     def printQ(self):
@@ -261,6 +267,11 @@ class RandomPlayer:
     def game_begin(self):
         pass
 
+#code th
+class HumanPlayer:
+    def __init__(self):
+        self.name = "hooman"
+
 
 if __name__ == "__main__":
     protagonist = QPlayer() #protagonist
@@ -271,5 +282,15 @@ if __name__ == "__main__":
     # print(game.availablePositions())
 
     game.play_game(5)
+    # game.player1.printQ()
+
     # protagonist.q_table[str(game.board.reshape(BOARD_ROWS * BOARD_COLS))] = 1
     # print(protagonist.q_table)
+
+    test_player = QPlayer()
+    test_player.load_policy(f"q_student_policy_{FILE_NUM}")
+    # test_player.printQ()
+
+    print(f"length p1: {len(game.player1.q_table)}")
+    print(f"length test: {len(test_player.q_table)}")
+    print(f"equal? {game.player1.q_table == test_player.q_table}")
