@@ -4,7 +4,7 @@ import pickle
 
 BOARD_ROWS = 3
 BOARD_COLS = 3
-FILE_NUM = 'new'
+FILE_NUM = '10000'
 
 class State:
     def __init__(self, student, teacher):
@@ -15,69 +15,90 @@ class State:
         self.currentSymbol = None
         self.winningSymbol = None
         self.isEndGame = False
+        self.p1Wins = 0
+        self.p1First = 0 #number of times p1 went first
+        self.p2Wins = 0
+        self.p2First = 0 #number of times p2 went first
+        self.draws = 0
 
     def play_game(self, iterations):
         for i in range(iterations):
-            if i % 10 == 0:
-                print(f"Iteration: {i}")
+            # if i % 10 == 0:
+            #     print(f"Iteration: {i}")
 
             self.reset()
             self.player1.game_begin()
             self.player2.game_begin()
-            # self.randomize_symbol()
-            # print('player1', self.player1.symbol)
-            # print('player2', self.player2.symbol)
 
-            # isPlayer1 = random.choice([True, False])
             isX = random.choice([True, False])
             print(f"isx: {isX}")
+            self.update_first_data(isX)
+            
             while not self.isEndGame:
-                # if isPlayer1:
-                #     move = self.player1.get_action(self.board, self.available_positions())
-                #     self.currentSymbol = self.player1.symbol
-                # else:
-                #     move = self.player2.get_random_action(self.available_positions())
-                #     self.currentSymbol = self.player2.symbol
-
                 if isX:
-                    move = self.player1.get_action(self.board, self.available_positions())
+                    # move = self.player1.get_action(self.board, self.available_positions())
+                    move = self.player1.get_random_action(self.available_positions())
                 else:
                     move = self.player2.get_random_action(self.available_positions())
+                    # move = self.player2.get_action(self.board, self.available_positions())
 
                 self.update_state(move, isX)
-                game.display_board()
+                self.display_board()
 
                 reward, self.isEndGame, self.winningSymbol = self.check_win('X' if isX else 'O')
-                # print("reward: ", reward)
                 if self.isEndGame:
                     current_state = self.get_hash()
                     if reward == 0.5:
+                        print("draw")
                         self.player1.updateQ(reward, current_state, self.available_positions())
                         self.player2.updateQ(reward, current_state, self.available_positions())
-                    elif reward == 0:
-                        # if isPlayer1:
-                        if isX:
-                            self.player1.updateQ(reward, current_state, self.available_positions())
-                        else:
-                            self.player2.updateQ(reward, current_state, self.available_positions())
+                        self.draws += 1
                     else:
-                        # print("winner: ", self.currentSymbol)
                         print("winner: ", self.winningSymbol)
-                        # if isPlayer1:
                         if self.winningSymbol == 'X' and isX:
                             self.player1.updateQ(reward, current_state, self.available_positions())
                             self.player2.updateQ(-1 * reward, current_state, self.available_positions())
+                            self.p1Wins += 1
                         else:
                             self.player1.updateQ(-1 * reward, current_state, self.available_positions())
                             self.player2.updateQ(reward, current_state, self.available_positions())
-                    
-                if (len(self.available_positions()) == 0):
-                    self.isEndGame = True
+                            self.p2Wins += 1
 
-                # isPlayer1 = not isPlayer1
                 isX = not isX
-        self.player1.save_policy()
+        # self.player1.save_policy()
+        self.save_data()
     
+    def play_game_2(self):
+        isX = random.choice([True, False])
+        print(f"isx: {isX}")
+
+        while not self.isEndGame:
+            if isX:
+                move = self.player1.get_action(self.board, self.available_positions())
+            else:
+                move = self.player2.get_action(self.available_positions())
+
+            self.update_state(move, isX)
+            self.display_board()
+
+            reward, self.isEndGame, self.winningSymbol = self.check_win('X' if isX else 'O')
+            # print("reward: ", reward)
+            if self.isEndGame:
+                if reward == 0.5:
+                    print(self.winningSymbol + "!")
+                else:
+                    print(self.winningSymbol + " wins!")
+
+                cont = input("continue? y/n. ")
+                if cont.lower() == "y":
+                    self.reset()
+                    self.display_board()
+                else:
+                    exit()
+
+            isX = not isX
+
+
     # for q-table key
     def get_hash(self):
         hash = str(self.board.reshape(BOARD_COLS * BOARD_ROWS))
@@ -143,10 +164,20 @@ class State:
         self.board = self.board.astype(str)
         self.currentSymbol = None
         self.isEndGame = False
-    
-    def give_reward(self):
-        pass
 
+    def update_first_data(self, isX):
+        if isX:
+            self.p1First += 1
+        else:
+            self.p2First += 1
+    
+    def save_data(self):
+        print("Saving win data...")
+        fp = open("random_v_random_wins.txt", "a")
+        print(f"{FILE_NUM} {self.p1Wins} {self.p2Wins} {self.draws} {self.p1First} {self.p2First}\n")
+        fp.write(f"{FILE_NUM} {self.p1Wins} {self.p2Wins} {self.draws} {self.p1First} {self.p2First}\n")
+        fp.close()
+        print("Successfully saved!")
 
 class QPlayer:
     def __init__(self, epsilon = 0.2, alpha=0.3, gamma=0.9):
@@ -154,7 +185,6 @@ class QPlayer:
         self.epsilon = epsilon
         self.alpha = alpha
         self.gamma = gamma
-        # self.states_visited = []  
         self.q_table = {}
         self.state_action_key = None #to use for the calculation later
         self.state_action_value = None #to use for the calculation later
@@ -208,7 +238,7 @@ class QPlayer:
     
     def save_policy(self):
         print("Saving policy...")
-        fw = open(f'q_student_policy_{FILE_NUM}', 'wb')
+        fw = open(f'q_{FILE_NUM}', 'wb')
         pickle.dump(self.q_table, fw)
         fw.close()
         print("Successfully saved!")
@@ -223,7 +253,6 @@ class QPlayer:
 
     def printQ(self):
         print("===Q-table===")
-
         for i in self.q_table.keys():
             print(f"{i}: {self.q_table[i]}")
         
@@ -241,7 +270,7 @@ class QPlayer:
         print(f"Q(s,a) = {self.state_action_value} + {self.alpha} * (({reward} + ({self.gamma} * {max_Q_next})) - {self.state_action_value})")
         self.q_table[self.state_action_key] = self.state_action_value + (self.alpha * ((reward + (self.gamma * max_Q_next)) - self.state_action_value))
         print(f"new Q(s,a) = {self.q_table[self.state_action_key]}")
-        self.printQ()
+        # self.printQ()
 
 
 class RandomPlayer:
@@ -252,13 +281,13 @@ class RandomPlayer:
         self.gamma = gamma
         self.q_table = {}
 
-    def get_random_action(self, possible_moves):
-        action = random.choice(possible_moves) ##action
+    def get_random_action(self, available_positions):
+        action = random.choice(available_positions) ##action
         return action
     
-    def get_action(self, possible_moves):
+    def get_action(self, available_positions):
         #epsilon greedy
-        action = random.choice(possible_moves) ##action
+        action = random.choice(available_positions) ##action
         return action
     
     def updateQ(self, reward, state, available_positions):
@@ -271,26 +300,59 @@ class RandomPlayer:
 class HumanPlayer:
     def __init__(self):
         self.name = "hooman"
+    
+    def get_action(self, available_positions):
+        while True:
+            row = int(input("Input row: "))
+            col = int(input("Input col: "))
+            action = (row, col)
+            if action in available_positions:
+                return action
+    
+    def updateQ(self, reward, state, available_positions):
+        pass
+
+    def game_begin(self):
+        pass
 
 
 if __name__ == "__main__":
-    protagonist = QPlayer() #protagonist
+    # random versus random
+    protagonist = RandomPlayer() #protagonist
     antagonist = RandomPlayer() #antagonist, might have to have different functions for this one  
     game = State(protagonist, antagonist)
     game.display_board()
-    # print(game.board.reshape(BOARD_ROWS * BOARD_COLS))
-    # print(game.availablePositions())
+    game.play_game(int(FILE_NUM))
 
-    game.play_game(5)
-    # game.player1.printQ()
+    #Q-learn versus random
+    # protagonist = QPlayer() #protagonist
+    # antagonist = RandomPlayer() #antagonist, might have to have different functions for this one  
+    # game = State(protagonist, antagonist)
+    # game.display_board()
+    # game.play_game(int(FILE_NUM))
 
-    # protagonist.q_table[str(game.board.reshape(BOARD_ROWS * BOARD_COLS))] = 1
-    # print(protagonist.q_table)
+    #Q-learn versus trained
+    # protagonist = QPlayer()
+    # antagonist = QPlayer(epsilon=0)
+    # antagonist.load_policy(f"q_student_policy_{FILE_NUM}")
+    # game = State(protagonist, antagonist)
+    # game.display_board()
+    # game.play_game(int(FILE_NUM))
 
-    test_player = QPlayer()
-    test_player.load_policy(f"q_student_policy_{FILE_NUM}")
-    # test_player.printQ()
+    #trained versus trained
+    # protagonist = QPlayer(epsilon=0)
+    # protagonist.load_policy(f"q_student_policy_{FILE_NUM}")
+    # antagonist = QPlayer(epsilon=0)
+    # antagonist.load_policy(f"new_q_student_policy_{FILE_NUM}")
+    # game = State(protagonist, antagonist)
+    # game.display_board()
+    # game.play_game(int(FILE_NUM))
 
-    print(f"length p1: {len(game.player1.q_table)}")
-    print(f"length test: {len(test_player.q_table)}")
-    print(f"equal? {game.player1.q_table == test_player.q_table}")
+
+    # trained versus hooman
+    # protagonist = QPlayer(epsilon=0)
+    # protagonist.load_policy(f"q_student_policy_{FILE_NUM}")
+    # hooman = HumanPlayer() #antagonist, might have to have different functions for this one  
+    # game = State(protagonist, hooman)
+    # game.display_board()
+    # game.play_game_2()
