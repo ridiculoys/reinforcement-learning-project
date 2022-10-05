@@ -4,7 +4,7 @@ import pickle
 
 BOARD_ROWS = 3
 BOARD_COLS = 3
-FILE_NUM = '10000'
+FILE_NUM = '20000'
 
 class State:
     def __init__(self, student, teacher):
@@ -65,7 +65,7 @@ class State:
                             self.p2Wins += 1
 
                 isX = not isX
-        # self.player1.save_policy()
+        self.player1.save_policy()
         self.save_data()
     
     def play_game_2(self):
@@ -296,6 +296,9 @@ class RandomPlayer:
     def game_begin(self):
         pass
 
+    def save_policy(self):
+        pass
+
 #code th
 class HumanPlayer:
     def __init__(self):
@@ -348,10 +351,9 @@ if __name__ == "__main__":
     # game.display_board()
     # game.play_game(int(FILE_NUM))
 
-
     # trained versus hooman
     # protagonist = QPlayer(epsilon=0)
-    # protagonist.load_policy(f"q_student_policy_{FILE_NUM}")
+    # protagonist.load_policy(f"q_student/q_student_policy_{FILE_NUM}")
     # hooman = HumanPlayer() #antagonist, might have to have different functions for this one  
     # game = State(protagonist, hooman)
     # game.display_board()
