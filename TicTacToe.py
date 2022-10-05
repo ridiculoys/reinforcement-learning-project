@@ -36,8 +36,8 @@ class State:
             
             while not self.isEndGame:
                 if isX:
-                    # move = self.player1.get_action(self.board, self.available_positions())
-                    move = self.player1.get_random_action(self.available_positions())
+                    move = self.player1.get_action(self.board, self.available_positions())
+                    # move = self.player1.get_random_action(self.available_positions())
                 else:
                     move = self.player2.get_random_action(self.available_positions())
                     # move = self.player2.get_action(self.board, self.available_positions())
@@ -65,8 +65,8 @@ class State:
                             self.p2Wins += 1
 
                 isX = not isX
-        self.player1.save_policy()
-        self.save_data()
+        self.player1.save_policy(f"against_random/q_student_policy_{FILE_NUM}")
+        self.save_data("2_q_v_random_wins.txt")
     
     def play_game_2(self):
         isX = random.choice([True, False])
@@ -171,17 +171,18 @@ class State:
         else:
             self.p2First += 1
     
-    def save_data(self):
+    def save_data(self, filename):
         print("Saving win data...")
-        fp = open("random_v_random_wins.txt", "a")
+        fp = open(filename, "a")
         print(f"{FILE_NUM} {self.p1Wins} {self.p2Wins} {self.draws} {self.p1First} {self.p2First}\n")
         fp.write(f"{FILE_NUM} {self.p1Wins} {self.p2Wins} {self.draws} {self.p1First} {self.p2First}\n")
         fp.close()
         print("Successfully saved!")
 
 class QPlayer:
-    def __init__(self, epsilon = 0.2, alpha=0.3, gamma=0.9):
+    def __init__(self, trained = False, epsilon = 0.2, alpha=0.3, gamma=0.9):
         self.symbol = None
+        self.trained = trained
         self.epsilon = epsilon
         self.alpha = alpha
         self.gamma = gamma
@@ -222,23 +223,30 @@ class QPlayer:
                 q_values.append(self.getQ_value(state, action))
             max_q = max(q_values)
 
+            print('q', q_values)
+
             # return max value be greedy) 
             if q_values.count(max_q) > 1:
                 #gets indices of the max values in q_values
                 actions_list = [i for i in range(len(possible_moves)) if q_values[i] == max_q]
+                print('actions', actions_list)
                 index = random.choice(actions_list)
             else:
                 index = q_values.index(max_q)
             
+            print('index', index)
+            
             action = possible_moves[index]
+            print('possible', possible_moves)
+            print('poss[index]', action)
 
         self.state_action_key = (state, action)
         self.state_action_value = self.getQ_value(state, action)
         return action
     
-    def save_policy(self):
+    def save_policy(self, filename):
         print("Saving policy...")
-        fw = open(f'q_{FILE_NUM}', 'wb')
+        fw = open(filename, 'wb')
         pickle.dump(self.q_table, fw)
         fw.close()
         print("Successfully saved!")
@@ -260,17 +268,18 @@ class QPlayer:
 
     
     def updateQ(self, reward, state, available_positions):
-        next_q_values = []
-        for action in available_positions:
-            next_q_values.append(self.getQ_value(state, action))
-        
-        max_Q_next = max(next_q_values) if next_q_values else 0.0
+        if not self.trained:
+            next_q_values = []
+            for action in available_positions:
+                next_q_values.append(self.getQ_value(state, action))
+            
+            max_Q_next = max(next_q_values) if next_q_values else 0.0
 
-        print("Q(s,a) = Q(s,a) + alpha * ((reward + (y * maxQ(s', a'))) - Q(s,a))")
-        print(f"Q(s,a) = {self.state_action_value} + {self.alpha} * (({reward} + ({self.gamma} * {max_Q_next})) - {self.state_action_value})")
-        self.q_table[self.state_action_key] = self.state_action_value + (self.alpha * ((reward + (self.gamma * max_Q_next)) - self.state_action_value))
-        print(f"new Q(s,a) = {self.q_table[self.state_action_key]}")
-        # self.printQ()
+            print("Q(s,a) = Q(s,a) + alpha * ((reward + (y * maxQ(s', a'))) - Q(s,a))")
+            print(f"Q(s,a) = {self.state_action_value} + {self.alpha} * (({reward} + ({self.gamma} * {max_Q_next})) - {self.state_action_value})")
+            self.q_table[self.state_action_key] = self.state_action_value + (self.alpha * ((reward + (self.gamma * max_Q_next)) - self.state_action_value))
+            print(f"new Q(s,a) = {self.q_table[self.state_action_key]}")
+            # self.printQ()
 
 
 class RandomPlayer:
@@ -321,24 +330,32 @@ class HumanPlayer:
 
 if __name__ == "__main__":
     # random versus random
-    protagonist = RandomPlayer() #protagonist
-    antagonist = RandomPlayer() #antagonist, might have to have different functions for this one  
-    game = State(protagonist, antagonist)
-    game.display_board()
-    game.play_game(int(FILE_NUM))
-
-    #Q-learn versus random
-    # protagonist = QPlayer() #protagonist
+    # protagonist = RandomPlayer() #protagonist
     # antagonist = RandomPlayer() #antagonist, might have to have different functions for this one  
     # game = State(protagonist, antagonist)
     # game.display_board()
     # game.play_game(int(FILE_NUM))
 
-    #Q-learn versus trained
-    # protagonist = QPlayer()
-    # antagonist = QPlayer(epsilon=0)
-    # antagonist.load_policy(f"q_student_policy_{FILE_NUM}")
+    #Q-learn versus random
+    protagonist = QPlayer() #protagonist
+    antagonist = RandomPlayer() #antagonist, might have to have different functions for this one  
+    game = State(protagonist, antagonist)
+    game.display_board()
+    game.play_game(int(FILE_NUM))
+
+    # trained versus random
+    # protagonist = QPlayer(trained=True, epsilon=0) #protagonist
+    # protagonist.load_policy(f"against_random/new_q_student_policy_{FILE_NUM}")
+    # antagonist = RandomPlayer() #antagonist, might have to have different functions for this one
     # game = State(protagonist, antagonist)
+    # game.display_board()
+    # game.play_game(int(FILE_NUM))
+
+    #Q-learn versus trained
+    # protagonist = QPlayer() # trained to use O
+    # antagonist = QPlayer(trained=True, epsilon=0) #trained to use X
+    # antagonist.load_policy(f"against_random/new_q_student_policy_{FILE_NUM}")
+    # game = State(antagonist, protagonist)
     # game.display_board()
     # game.play_game(int(FILE_NUM))
 
