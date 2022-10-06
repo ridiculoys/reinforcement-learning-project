@@ -1,4 +1,3 @@
-Iter trainedW randomW Draw p1F p2F
 100 44 40 16 60 40
 200 85 95 20 104 96
 500 220 200 80 246 254
