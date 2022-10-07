@@ -4,7 +4,7 @@ import pickle
 
 BOARD_ROWS = 3
 BOARD_COLS = 3
-FILE_NUM = '20000'
+FILE_NUM = '30000'
 
 class State:
     def __init__(self, student, teacher):
@@ -39,8 +39,8 @@ class State:
                     move = self.player1.get_action(self.board, self.available_positions())
                     # move = self.player1.get_random_action(self.available_positions())
                 else:
-                    move = self.player2.get_random_action(self.available_positions())
-                    # move = self.player2.get_action(self.board, self.available_positions())
+                    # move = self.player2.get_random_action(self.available_positions())
+                    move = self.player2.get_action(self.board, self.available_positions())
 
                 self.update_state(move, isX)
                 self.display_board()
@@ -65,8 +65,13 @@ class State:
                             self.p2Wins += 1
 
                 isX = not isX
-        self.player1.save_policy(f"against_random/q_student_policy_{FILE_NUM}")
-        self.save_data("2_q_v_random_wins.txt")
+        # self.player1.save_policy(f"against_random/new_q_student_policy_{FILE_NUM}")
+        # self.player2.save_policy(f"player_2_save/q_student_policy_{FILE_NUM}")
+        # self.save_data("1_random_v_random.txt")
+        # self.save_data("2_q_v_random.txt")
+        # self.save_data("3_trained_v_random.txt")
+        # self.save_data("4_1_trained_v_q.txt")
+        self.save_data("5_trained_v_trained.txt")
     
     def play_game_2(self):
         isX = random.choice([True, False])
@@ -337,11 +342,11 @@ if __name__ == "__main__":
     # game.play_game(int(FILE_NUM))
 
     #Q-learn versus random
-    protagonist = QPlayer() #protagonist
-    antagonist = RandomPlayer() #antagonist, might have to have different functions for this one  
-    game = State(protagonist, antagonist)
-    game.display_board()
-    game.play_game(int(FILE_NUM))
+    # protagonist = QPlayer() #protagonist
+    # antagonist = RandomPlayer() #antagonist, might have to have different functions for this one  
+    # game = State(protagonist, antagonist)
+    # game.display_board()
+    # game.play_game(int(FILE_NUM))
 
     # trained versus random
     # protagonist = QPlayer(trained=True, epsilon=0) #protagonist
@@ -352,21 +357,21 @@ if __name__ == "__main__":
     # game.play_game(int(FILE_NUM))
 
     #Q-learn versus trained
-    # protagonist = QPlayer() # trained to use O
-    # antagonist = QPlayer(trained=True, epsilon=0) #trained to use X
+    # protagonist = QPlayer() # trained to use O, p2
+    # antagonist = QPlayer(trained=True, epsilon=0) #trained to use X, so p1
     # antagonist.load_policy(f"against_random/new_q_student_policy_{FILE_NUM}")
     # game = State(antagonist, protagonist)
     # game.display_board()
     # game.play_game(int(FILE_NUM))
 
     #trained versus trained
-    # protagonist = QPlayer(epsilon=0)
-    # protagonist.load_policy(f"q_student_policy_{FILE_NUM}")
-    # antagonist = QPlayer(epsilon=0)
-    # antagonist.load_policy(f"new_q_student_policy_{FILE_NUM}")
-    # game = State(protagonist, antagonist)
-    # game.display_board()
-    # game.play_game(int(FILE_NUM))
+    protagonist = QPlayer(trained=True, epsilon=0)
+    protagonist.load_policy(f"against_random/new_q_student_policy_{FILE_NUM}")
+    antagonist = QPlayer(trained=True, epsilon=0)
+    antagonist.load_policy(f"player_2_save/q_student_policy_{FILE_NUM}")
+    game = State(protagonist, antagonist)
+    game.display_board()
+    game.play_game(int(FILE_NUM))
 
     # trained versus hooman
     # protagonist = QPlayer(epsilon=0)
