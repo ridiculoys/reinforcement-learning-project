@@ -79,9 +79,12 @@ class State:
 
         while not self.isEndGame:
             if isX:
-                move = self.player1.get_action(self.board, self.available_positions())
+                # move = self.player1.get_action(self.board, self.available_positions())
+                move = self.player1.get_action(self.available_positions())
             else:
-                move = self.player2.get_action(self.available_positions())
+                # move = self.player2.get_action(self.available_positions())
+                move = self.player2.get_action(self.board, self.available_positions())
+
 
             self.update_state(move, isX)
             self.display_board()
@@ -335,11 +338,11 @@ class HumanPlayer:
 
 if __name__ == "__main__":
     # random versus random
-    # protagonist = RandomPlayer() #protagonist
-    # antagonist = RandomPlayer() #antagonist, might have to have different functions for this one  
-    # game = State(protagonist, antagonist)
-    # game.display_board()
-    # game.play_game(int(FILE_NUM))
+    protagonist = RandomPlayer() #protagonist
+    antagonist = RandomPlayer() #antagonist, might have to have different functions for this one  
+    game = State(protagonist, antagonist)
+    game.display_board()
+    game.play_game(int(FILE_NUM))
 
     #Q-learn versus random
     # protagonist = QPlayer() #protagonist
@@ -365,18 +368,21 @@ if __name__ == "__main__":
     # game.play_game(int(FILE_NUM))
 
     #trained versus trained
-    protagonist = QPlayer(trained=True, epsilon=0)
-    protagonist.load_policy(f"against_random/new_q_student_policy_{FILE_NUM}")
-    antagonist = QPlayer(trained=True, epsilon=0)
-    antagonist.load_policy(f"player_2_save/q_student_policy_{FILE_NUM}")
-    game = State(protagonist, antagonist)
-    game.display_board()
-    game.play_game(int(FILE_NUM))
+    # protagonist = QPlayer(trained=True, epsilon=0)
+    # protagonist.load_policy(f"against_random/new_q_student_policy_{FILE_NUM}")
+    # antagonist = QPlayer(trained=True, epsilon=0)
+    # antagonist.load_policy(f"player_2_save/q_student_policy_{FILE_NUM}")
+    # game = State(protagonist, antagonist)
+    # game.display_board()
+    # game.play_game(int(FILE_NUM))
 
     # trained versus hooman
-    # protagonist = QPlayer(epsilon=0)
-    # protagonist.load_policy(f"q_student/q_student_policy_{FILE_NUM}")
-    # hooman = HumanPlayer() #antagonist, might have to have different functions for this one  
+    # protagonist = QPlayer(trained=True, epsilon=0)
+    # protagonist.load_policy(f"against_random/new_q_student_policy_{FILE_NUM}")
+    # protagonist.load_policy(f"player_2_save/q_student_policy_{FILE_NUM}")
+    # hooman = HumanPlayer()
     # game = State(protagonist, hooman)
+    # game = State(protagonist, hooman)
+    # game = State(hooman, protagonist)
     # game.display_board()
     # game.play_game_2()
