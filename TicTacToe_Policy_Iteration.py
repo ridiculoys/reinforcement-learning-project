@@ -53,7 +53,9 @@ class State:
 
                 for s in self.player1.value_function.keys():
                     reward = self.get_reward(s)
-                    for moves in available_positions:
+                    #for next states
+                    # Q(s,a) = summation of P(s' | s,a) [R(s, a, s') + gamma * V(s')]
+                    for moves in available_positions: 
                         val +=  probability * (self.player1.gamma * self.player1.state_values)
 
 
