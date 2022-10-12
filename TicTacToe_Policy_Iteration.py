@@ -7,7 +7,7 @@ BOARD_COLS = 3
 FILE_NUM = '30000'
 
 class State:
-    def __init__(self, student, teacher):
+    def __init__(self, student, teacher, policy = None, delta = None):
         self.board = np.zeros((BOARD_ROWS, BOARD_COLS))
         self.board = self.board.astype(str)
         self.player1 = student
@@ -21,57 +21,78 @@ class State:
         self.p2First = 0 #number of times p2 went first
         self.draws = 0
 
-    def play_game(self, iterations):
-        for i in range(iterations):
-            # if i % 10 == 0:
-            #     print(f"Iteration: {i}")
+        # from : https://medium.com/@ngao7/markov-decision-process-policy-iteration-42d35ee87c82
+        self.index = 0
+        self.reward = None
+        self.transition_prob = None
+        self.gamma = None
+        self.delta = delta
+        self.policy = policy if policy != None else "random_policy()" #need to change this
+        self.value_fx = None
 
-            self.reset()
-            self.player1.game_begin()
-            self.player2.game_begin()
+    def play_game(self, max_policy_iter=10000, max_value_iter=10000):
+        self.player1.initialize_states()
 
-            isX = random.choice([True, False])
-            print(f"isx: {isX}")
-            self.update_first_data(isX)
-            
-            while not self.isEndGame:
-                if isX:
-                    move = self.player1.get_action(self.board, self.available_positions())
-                    # move = self.player1.get_random_action(self.available_positions())
-                else:
-                    # move = self.player2.get_random_action(self.available_positions())
-                    move = self.player2.get_action(self.board, self.available_positions())
+        for i in range(max_policy_iter):
+            if i % 10 == 0:
+                print(f"Iteration: {i}")
 
-                self.update_state(move, isX)
-                self.display_board()
+            #Initial assumption is that policy is stable
+            optimal_policy_found = True
 
-                reward, self.isEndGame, self.winningSymbol = self.check_win('X' if isX else 'O')
-                if self.isEndGame:
-                    current_state = self.get_hash()
-                    if reward == 0.5:
-                        print("draw")
-                        self.player1.updateQ(reward, current_state, self.available_positions())
-                        self.player2.updateQ(reward, current_state, self.available_positions())
-                        self.draws += 1
+            for j in range(max_value_iter):
+                max_diff = 0
+
+                self.reset()
+                self.player1.game_begin()
+                self.player2.game_begin()
+
+                isX = random.choice([True, False])
+                print(f"isx: {isX}")
+                self.update_first_data(isX)
+
+                for s in self.player1.value_function.keys():
+                    reward = self.get_reward(s)
+                    for moves in available_positions:
+                        val +=  probability * (self.player1.gamma * self.player1.state_values)
+
+
+
+                
+                while not self.isEndGame:
+                    if isX:
+                        move = self.player1.get_action(self.board, self.available_positions(self.board))
+                        # move = self.player1.get_random_action(self.available_positions(self.board))
                     else:
-                        print("winner: ", self.winningSymbol)
-                        if self.winningSymbol == 'X' and isX:
-                            self.player1.updateQ(reward, current_state, self.available_positions())
-                            self.player2.updateQ(-1 * reward, current_state, self.available_positions())
-                            self.p1Wins += 1
-                        else:
-                            self.player1.updateQ(-1 * reward, current_state, self.available_positions())
-                            self.player2.updateQ(reward, current_state, self.available_positions())
-                            self.p2Wins += 1
+                        move = self.player2.get_random_action(self.available_positions(self.board))
+                        # move = self.player2.get_action(self.board, self.available_positions(self.board))
 
-                isX = not isX
-        # self.player1.save_policy(f"against_random/new_q_student_policy_{FILE_NUM}")
-        # self.player2.save_policy(f"player_2_save/q_student_policy_{FILE_NUM}")
-        # self.save_data("1_random_v_random.txt")
-        # self.save_data("2_q_v_random.txt")
-        # self.save_data("3_trained_v_random.txt")
-        # self.save_data("4_1_trained_v_q.txt")
-        self.save_data("5_trained_v_trained.txt")
+                    self.update_state(move, isX)
+                    self.display_board()
+
+                    reward, self.isEndGame, self.winningSymbol = self.check_win('X' if isX else 'O')
+                    
+                    
+
+                    if self.isEndGame:
+                        current_state = self.get_hash(self.board)
+                        if reward == 0.5:
+                            print("draw")
+                            self.player1.updateQ(reward, current_state, self.available_positions(self.board))
+                            self.player2.updateQ(reward, current_state, self.available_positions(self.board))
+                            self.draws += 1
+                        else:
+                            print("winner: ", self.winningSymbol)
+                            if self.winningSymbol == 'X' and isX:
+                                self.player1.updateQ(reward, current_state, self.available_positions(self.board))
+                                self.player2.updateQ(-1 * reward, current_state, self.available_positions(self.board))
+                                self.p1Wins += 1
+                            else:
+                                self.player1.updateQ(-1 * reward, current_state, self.available_positions(self.board))
+                                self.player2.updateQ(reward, current_state, self.available_positions(self.board))
+                                self.p2Wins += 1
+
+                    isX = not isX
     
     def play_game_2(self):
         isX = random.choice([True, False])
@@ -79,9 +100,9 @@ class State:
 
         while not self.isEndGame:
             if isX:
-                move = self.player1.get_action(self.board, self.available_positions())
+                move = self.player1.get_action(self.board, self.available_positions(self.board))
             else:
-                move = self.player2.get_action(self.available_positions())
+                move = self.player2.get_action(self.available_positions(self.board))
 
             self.update_state(move, isX)
             self.display_board()
@@ -105,8 +126,9 @@ class State:
 
 
     # for q-table key
-    def get_hash(self):
-        hash = str(self.board.reshape(BOARD_COLS * BOARD_ROWS))
+    def get_hash(self, board):
+        # print(board)
+        hash = str(board.reshape(BOARD_COLS * BOARD_ROWS))
         return hash
 
     def randomize_symbol(self):
@@ -136,7 +158,7 @@ class State:
             return 1, True, symbol
         
         #draw
-        if len(self.available_positions()) == 0:
+        if len(self.available_positions(self.board)) == 0:
             return 0.5, True, 'draw'
         
         return 0, False, 'no reward'
@@ -152,17 +174,67 @@ class State:
             print()
         print("-------------------")
 
-    def available_positions(self):
+    def available_positions(self, board):
         available = []
         for i in range(BOARD_ROWS):
             for j in range(BOARD_COLS):
-                if self.board[i][j] == '0.0':
+                if board[i][j] == '0.0':
                     available.append((i,j))
         
         return available
 
     def update_state(self, position, isX):
         self.board[position[0]][position[1]] = 'X' if isX else 'O'
+
+    def get_state(self, initial_state, turn):
+        available_positions = self.available_positions(initial_state)
+        if len(available_positions) == 0:
+            hash = self.get_hash(initial_state)
+            self.player1.state_values[hash] = 0
+            return
+        else:
+            for move in available_positions:
+                new_state = initial_state.copy()
+                new_state[move] = turn
+                hash = self.get_hash(new_state)
+                self.get_state(new_state, 'X' if turn == 'O' else 'O')
+                if hash in self.player1.state_values:
+                    continue
+                self.player1.state_values[hash] = 0
+                self.index += 1
+                print(self.index)
+
+    def initialize_player_states(self):
+        empty_hash = self.get_hash(self.board)
+        self.player1.state_values[empty_hash] = 0
+        self.index += 1
+        print(self.index)
+        for i in range(BOARD_ROWS):
+            for j in range(BOARD_COLS):
+                X_state = self.board.copy()
+                X_state[i][j] = 'X'
+
+                hash = self.get_hash(X_state)
+                self.player1.state_values[hash] = 0
+                self.index += 1
+                print(self.index)
+
+                ret = self.get_state(X_state, 'O')
+
+        for k in range(BOARD_ROWS):
+            for l in range(BOARD_COLS):
+                O_state = self.board.copy()
+                O_state[k][l] = 'O'
+
+                hash = self.get_hash(O_state)
+                self.player1.state_values[hash] = 0
+                self.index += 1
+                print(self.index)
+
+                ret = self.get_state(O_state, 'X')
+
+
+
 
     def reset(self):
         self.board = np.zeros((BOARD_ROWS, BOARD_COLS))
@@ -216,7 +288,7 @@ class QPlayer:
             q_value = self.q_table[(state, action)] = 1.0
         return q_value
     
-    #epsilon greedy get action
+    #epsilon greedy policy get action
     def get_action(self, board, possible_moves):
         state = self.get_hash(board)
         if random.random() < self.epsilon:
@@ -286,6 +358,70 @@ class QPlayer:
             print(f"new Q(s,a) = {self.q_table[self.state_action_key]}")
             # self.printQ()
 
+class Agent:
+    def __init__(self, epsilon = 0.2, gamma=0.9, delta=10):
+        self.epsilon = epsilon
+        self.gamma = gamma
+        self.delta = delta
+        self.state_values = {}
+        self.policy = {}
+        self.q_table = {}
+
+    def initialize_player_states(self):
+        print("Initializing states...")
+        print("Loading file...")
+        fr = open("states.txt", 'rb')
+        self.state_values = pickle.load(fr)
+        fr.close()
+        print("Successfully loaded!")
+
+    #epsilon greedy policy get action
+    def get_action(self, board, possible_moves):
+        state = self.get_hash(board)
+        if random.random() < self.epsilon:
+            action = random.choice(possible_moves) ##action
+        else:
+            #get q values for next possible moves, get max
+            q_values = []
+            for action in possible_moves:
+                q_values.append(self.getQ_value(state, action))
+            max_q = max(q_values)
+
+            print('q', q_values)
+
+            # return max value be greedy) 
+            if q_values.count(max_q) > 1:
+                #gets indices of the max values in q_values
+                actions_list = [i for i in range(len(possible_moves)) if q_values[i] == max_q]
+                print('actions', actions_list)
+                index = random.choice(actions_list)
+            else:
+                index = q_values.index(max_q)
+            
+            print('index', index)
+            
+            action = possible_moves[index]
+            print('possible', possible_moves)
+            print('poss[index]', action)
+
+        self.state_action_key = (state, action)
+        self.state_action_value = self.getQ_value(state, action)
+        return action
+    
+    def save_states(self, filename):
+        print("Saving states...")
+        fw = open(filename, 'wb')
+        pickle.dump(self.state_values, fw)
+        fw.close()
+        print("Successfully saved!")
+    
+    def load_states(self, filename):
+        print("Loading states...")
+        fr = open(filename, 'rb')
+        self.state_values = pickle.load(fr)
+        fr.close()
+        print("Successfully loaded!")
+        
 
 class RandomPlayer:
     def __init__(self, epsilon = 0.2, alpha=0.3, gamma=0.9):
@@ -335,48 +471,15 @@ class HumanPlayer:
 
 if __name__ == "__main__":
     # random versus random
-    # protagonist = RandomPlayer() #protagonist
-    # antagonist = RandomPlayer() #antagonist, might have to have different functions for this one  
-    # game = State(protagonist, antagonist)
-    # game.display_board()
-    # game.play_game(int(FILE_NUM))
-
-    #Q-learn versus random
-    # protagonist = QPlayer() #protagonist
-    # antagonist = RandomPlayer() #antagonist, might have to have different functions for this one  
-    # game = State(protagonist, antagonist)
-    # game.display_board()
-    # game.play_game(int(FILE_NUM))
-
-    # trained versus random
-    # protagonist = QPlayer(trained=True, epsilon=0) #protagonist
-    # protagonist.load_policy(f"against_random/new_q_student_policy_{FILE_NUM}")
-    # antagonist = RandomPlayer() #antagonist, might have to have different functions for this one
-    # game = State(protagonist, antagonist)
-    # game.display_board()
-    # game.play_game(int(FILE_NUM))
-
-    #Q-learn versus trained
-    # protagonist = QPlayer() # trained to use O, p2
-    # antagonist = QPlayer(trained=True, epsilon=0) #trained to use X, so p1
-    # antagonist.load_policy(f"against_random/new_q_student_policy_{FILE_NUM}")
-    # game = State(antagonist, protagonist)
-    # game.display_board()
-    # game.play_game(int(FILE_NUM))
-
-    #trained versus trained
-    protagonist = QPlayer(trained=True, epsilon=0)
-    protagonist.load_policy(f"against_random/new_q_student_policy_{FILE_NUM}")
-    antagonist = QPlayer(trained=True, epsilon=0)
-    antagonist.load_policy(f"player_2_save/q_student_policy_{FILE_NUM}")
+    protagonist = Agent() #teacher
+    # protagonist.initialize_player_states()
+    antagonist = RandomPlayer() #trained q-learning
     game = State(protagonist, antagonist)
-    game.display_board()
-    game.play_game(int(FILE_NUM))
-
-    # trained versus hooman
-    # protagonist = QPlayer(epsilon=0)
-    # protagonist.load_policy(f"q_student/q_student_policy_{FILE_NUM}")
-    # hooman = HumanPlayer() #antagonist, might have to have different functions for this one  
-    # game = State(protagonist, hooman)
     # game.display_board()
-    # game.play_game_2()
+    
+    # game.initialize_player_states()
+    # print(len(game.player1.state_values))
+    # game.player1.save_states("states.txt")
+    
+    # game.play_game(int(FILE_NUM))
+    # game.play_game(max_policy_iter=10, max_value_iter=10)
