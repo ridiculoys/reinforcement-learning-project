@@ -29,13 +29,75 @@ class State:
         self.delta = delta
         self.policy = policy if policy != None else "random_policy()" #need to change this
         self.value_fx = None
+    
+    def get_board(self, data):
+        clean = data.strip("[]").replace("'", "").split(" ")
+        return np.reshape(clean, (3,3))
+
+    def get_reward(self, board):
+        for i in range(BOARD_ROWS):
+            #check row
+            if 'X' == board[i][0] == board[i][1] and board[i][1] == board[i][2]:
+                return 1
+            #check col
+            if 'X' == board[0][i] == board[1][i] and board[1][i] == board[2][i]:
+                return 1
+
+            #return -1 reward if O wins
+            #check row
+            if 'O' == board[i][0] == board[i][1] and board[i][1] == board[i][2]:
+                return -1
+            #check col
+            if 'O' == board[0][i] == board[1][i] and board[1][i] == board[2][i]:
+                return -1
+            
+
+        #diagonal for X
+        if 'X' == board[0][0] == board[1][1] and board[1][1] == board[2][2]:
+            return 1
+        if 'X' == board[2][0] == board[1][1] and board[1][1] == board[0][2]:
+            return 1
+
+        #diagonal for O
+        if 'O' == board[0][0] == board[1][1] and board[1][1] == board[2][2]:
+            return -1
+        if 'O' == board[2][0] == board[1][1] and board[1][1] == board[0][2]:
+            return -1
+        
+        #draw
+        if len(self.available_positions(board)) == 0:
+            return 0.5
+        
+        #no reward for non-terminating states
+        return 0
+
+    def update_state(self, board, position, symbol):
+        board[position[0]][position[1]] = symbol
+        return board
+
+    def get_symbol(self, board):
+        array = board.flatten()
+        unique, counts = np.unique(array, return_counts=True)
+
+        elements = dict(zip(unique, counts))
+        x_count = 0 if elements.get('X') is None else elements.get('X')
+        o_count = 0 if elements.get('O') is None else elements.get('O')
+
+        return 'X' if x_count <= o_count else 'O'
 
     def play_game(self, max_policy_iter=10000, max_value_iter=10000):
-        self.player1.initialize_states()
+        self.player1.initialize_player_states()
+        i = 0
+
+        for key in self.player1.state_values.keys():
+            if i==10:
+                break
+            cleaned = self.get_board(key)
+            i+=1
 
         for i in range(max_policy_iter):
-            if i % 10 == 0:
-                print(f"Iteration: {i}")
+        #     if i % 10 == 0:
+        #         print(f"Iteration: {i}")
 
             #Initial assumption is that policy is stable
             optimal_policy_found = True
@@ -43,89 +105,83 @@ class State:
             for j in range(max_value_iter):
                 max_diff = 0
 
-                self.reset()
-                self.player1.game_begin()
-                self.player2.game_begin()
+                for state in self.player1.state_values.keys():
+                    #check reward for X
+                    print('state', state)
+                    board = self.get_board(state)
+                    reward = self.get_reward(board)
 
-                isX = random.choice([True, False])
-                print(f"isx: {isX}")
-                self.update_first_data(isX)
-
-                for s in self.player1.value_function.keys():
-                    reward = self.get_reward(s)
-                    #for next states
                     # Q(s,a) = summation of P(s' | s,a) [R(s, a, s') + gamma * V(s')]
-                    for moves in available_positions: 
-                        val +=  probability * (self.player1.gamma * self.player1.state_values)
+
+                    #eq from https://medium.com/@ngao7/markov-decision-process-policy-iteration-42d35ee87c82#818c
+                    state_val = 0
+                    #get all available positions / next states for the current state being evaluated
+                    print("available", self.available_positions(board))
+
+                    for move in self.available_positions(board): 
+                        probability = 1 #deterministic
+                        
+                        symbol = self.get_symbol(board)
+                        #updated state
+                        next_state = self.update_state(board, move, symbol)
+                        hash = self.get_hash(next_state)
+
+                        state_val += self.player1.gamma * probability * self.player1.state_values[hash]
+                        
+                        #need to update board!!! inf loop
+                        break
+                    
+                    print('0', state_val)
+
+                    # #eq from prof
+                    # state_val = 0
+                    # for next_state in self.available_positions(self.get_board(s)): 
+                    #     probability = 1 #not sure where to get this
+                    #     hash = self.get_hash(next_state)
+                    #     state_val += probability * (reward + (self.player1.gamma * self.player1.state_values[hash]))
+                    # print('1', state_val)
+
+
+                    break
+                break
 
 
 
                 
-                while not self.isEndGame:
-                    if isX:
-                        move = self.player1.get_action(self.board, self.available_positions(self.board))
-                        # move = self.player1.get_random_action(self.available_positions(self.board))
-                    else:
-                        move = self.player2.get_random_action(self.available_positions(self.board))
-                        # move = self.player2.get_action(self.board, self.available_positions(self.board))
+                # while not self.isEndGame:
+                #     if isX:
+                #         move = self.player1.get_action(self.board, self.available_positions(self.board))
+                #         # move = self.player1.get_random_action(self.available_positions(self.board))
+                #     else:
+                #         move = self.player2.get_random_action(self.available_positions(self.board))
+                #         # move = self.player2.get_action(self.board, self.available_positions(self.board))
 
-                    self.update_state(move, isX)
-                    self.display_board()
+                #     self.update_state(move, isX)
+                #     self.display_board()
 
-                    reward, self.isEndGame, self.winningSymbol = self.check_win('X' if isX else 'O')
+                #     reward, self.isEndGame, self.winningSymbol = self.check_win('X' if isX else 'O')
                     
                     
 
-                    if self.isEndGame:
-                        current_state = self.get_hash(self.board)
-                        if reward == 0.5:
-                            print("draw")
-                            self.player1.updateQ(reward, current_state, self.available_positions(self.board))
-                            self.player2.updateQ(reward, current_state, self.available_positions(self.board))
-                            self.draws += 1
-                        else:
-                            print("winner: ", self.winningSymbol)
-                            if self.winningSymbol == 'X' and isX:
-                                self.player1.updateQ(reward, current_state, self.available_positions(self.board))
-                                self.player2.updateQ(-1 * reward, current_state, self.available_positions(self.board))
-                                self.p1Wins += 1
-                            else:
-                                self.player1.updateQ(-1 * reward, current_state, self.available_positions(self.board))
-                                self.player2.updateQ(reward, current_state, self.available_positions(self.board))
-                                self.p2Wins += 1
+                #     if self.isEndGame:
+                #         current_state = self.get_hash(self.board)
+                #         if reward == 0.5:
+                #             print("draw")
+                #             self.player1.updateQ(reward, current_state, self.available_positions(self.board))
+                #             self.player2.updateQ(reward, current_state, self.available_positions(self.board))
+                #             self.draws += 1
+                #         else:
+                #             print("winner: ", self.winningSymbol)
+                #             if self.winningSymbol == 'X' and isX:
+                #                 self.player1.updateQ(reward, current_state, self.available_positions(self.board))
+                #                 self.player2.updateQ(-1 * reward, current_state, self.available_positions(self.board))
+                #                 self.p1Wins += 1
+                #             else:
+                #                 self.player1.updateQ(-1 * reward, current_state, self.available_positions(self.board))
+                #                 self.player2.updateQ(reward, current_state, self.available_positions(self.board))
+                #                 self.p2Wins += 1
 
-                    isX = not isX
-    
-    def play_game_2(self):
-        isX = random.choice([True, False])
-        print(f"isx: {isX}")
-
-        while not self.isEndGame:
-            if isX:
-                move = self.player1.get_action(self.board, self.available_positions(self.board))
-            else:
-                move = self.player2.get_action(self.available_positions(self.board))
-
-            self.update_state(move, isX)
-            self.display_board()
-
-            reward, self.isEndGame, self.winningSymbol = self.check_win('X' if isX else 'O')
-            # print("reward: ", reward)
-            if self.isEndGame:
-                if reward == 0.5:
-                    print(self.winningSymbol + "!")
-                else:
-                    print(self.winningSymbol + " wins!")
-
-                cont = input("continue? y/n. ")
-                if cont.lower() == "y":
-                    self.reset()
-                    self.display_board()
-                else:
-                    exit()
-
-            isX = not isX
-
+                #     isX = not isX
 
     # for q-table key
     def get_hash(self, board):
@@ -142,28 +198,28 @@ class State:
             self.player1.symbol = 'O'
             self.player2.symbol = 'X'
 
-    def check_win(self, symbol):
-        for i in range(BOARD_ROWS):
-            #check row
-            if symbol == self.board[i][0] == self.board[i][1] and self.board[i][1] == self.board[i][2]:
-                return 1, True, symbol
+    # def check_win(self, symbol):
+    #     for i in range(BOARD_ROWS):
+    #         #check row
+    #         if symbol == self.board[i][0] == self.board[i][1] and self.board[i][1] == self.board[i][2]:
+    #             return 1, True, symbol
             
-            #check col
-            if symbol == self.board[0][i] == self.board[1][i] and self.board[1][i] == self.board[2][i]:
-                return 1, True, symbol
+    #         #check col
+    #         if symbol == self.board[0][i] == self.board[1][i] and self.board[1][i] == self.board[2][i]:
+    #             return 1, True, symbol
 
-        #diagonal
-        if symbol == self.board[0][0] == self.board[1][1] and self.board[1][1] == self.board[2][2]:
-            return 1, True, symbol
+    #     #diagonal
+    #     if symbol == self.board[0][0] == self.board[1][1] and self.board[1][1] == self.board[2][2]:
+    #         return 1, True, symbol
         
-        if symbol == self.board[2][0] == self.board[1][1] and self.board[1][1] == self.board[0][2]:
-            return 1, True, symbol
+    #     if symbol == self.board[2][0] == self.board[1][1] and self.board[1][1] == self.board[0][2]:
+    #         return 1, True, symbol
         
-        #draw
-        if len(self.available_positions(self.board)) == 0:
-            return 0.5, True, 'draw'
+    #     #draw
+    #     if len(self.available_positions(self.board)) == 0:
+    #         return 0.5, True, 'draw'
         
-        return 0, False, 'no reward'
+    #     return 0, False, 'no reward'
 
     def display_board(self):
         for i in range(BOARD_ROWS):
@@ -185,8 +241,8 @@ class State:
         
         return available
 
-    def update_state(self, position, isX):
-        self.board[position[0]][position[1]] = 'X' if isX else 'O'
+    # def update_state(self, position, isX):
+    #     self.board[position[0]][position[1]] = 'X' if isX else 'O'
 
     def get_state(self, initial_state, turn):
         available_positions = self.available_positions(initial_state)
@@ -477,6 +533,7 @@ if __name__ == "__main__":
     # protagonist.initialize_player_states()
     antagonist = RandomPlayer() #trained q-learning
     game = State(protagonist, antagonist)
+    game.play_game()
     # game.display_board()
     
     # game.initialize_player_states()
