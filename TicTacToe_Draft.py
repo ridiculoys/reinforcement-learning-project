@@ -86,7 +86,7 @@ class State:
         return 'X' if x_count <= o_count else 'O'
 
     def play_game(self, max_policy_iter=10000, max_value_iter=10000):
-        self.player1.initialize_player_states()
+        self.player1.load_player_states()
         i = 0
 
         for key in self.player1.state_values.keys():
@@ -122,6 +122,7 @@ class State:
                         probability = 1 #deterministic
                         
                         symbol = self.get_symbol(board)
+                        print('symbol', symbol)
                         #updated state
                         next_state = self.update_state(board, move, symbol)
                         hash = self.get_hash(next_state)
@@ -244,7 +245,15 @@ class State:
     # def update_state(self, position, isX):
     #     self.board[position[0]][position[1]] = 'X' if isX else 'O'
 
+    def invalid_state(state):
+        return
+
+
+
     def get_state(self, initial_state, turn):
+        if invalid_state(initial_state):
+            return
+
         available_positions = self.available_positions(initial_state)
         if len(available_positions) == 0:
             hash = self.get_hash(initial_state)
@@ -272,24 +281,26 @@ class State:
                 X_state = self.board.copy()
                 X_state[i][j] = 'X'
 
+                #adding the first instance of X in the board
                 hash = self.get_hash(X_state)
                 self.player1.state_values[hash] = 0
                 self.index += 1
                 print(self.index)
 
-                ret = self.get_state(X_state, 'O')
+                #traversing and iterating through all possible states
+                self.get_state(X_state, 'O')
 
-        for k in range(BOARD_ROWS):
-            for l in range(BOARD_COLS):
-                O_state = self.board.copy()
-                O_state[k][l] = 'O'
+        # for k in range(BOARD_ROWS):
+        #     for l in range(BOARD_COLS):
+        #         O_state = self.board.copy()
+        #         O_state[k][l] = 'O'
 
-                hash = self.get_hash(O_state)
-                self.player1.state_values[hash] = 0
-                self.index += 1
-                print(self.index)
+        #         hash = self.get_hash(O_state)
+        #         self.player1.state_values[hash] = 0
+        #         self.index += 1
+        #         print(self.index)
 
-                ret = self.get_state(O_state, 'X')
+        #         self.get_state(O_state, 'X')
 
 
 
@@ -425,7 +436,7 @@ class Agent:
         self.policy = {}
         self.q_table = {}
 
-    def initialize_player_states(self):
+    def load_player_states(self):
         print("Initializing states...")
         print("Loading file...")
         fr = open("states.txt", 'rb')
