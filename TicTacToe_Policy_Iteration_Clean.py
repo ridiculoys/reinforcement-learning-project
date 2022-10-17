@@ -102,10 +102,14 @@ class State:
 
             #Policy Evaluation
             for j in range(max_value_iter):
+                print("current index: ", j)
                 max_diff = 0
 
+                counter = 0
                 for state in self.teacher.state_values.keys():
                     print('state', state)
+                    print('v_old: ', self.teacher.state_values[state])
+                    print('max_diff: ', max_diff)
                     board = self.get_board(state)
                     reward = self.get_reward(board)
 
@@ -124,23 +128,33 @@ class State:
                         v_s += probability * self.teacher.state_values[hash]
                     
                     v_s = reward + (self.teacher.gamma*v_s)
-                    print('v_s', v_s)
 
                     #get max of the current max diff and the difference between new v_s and the old v_s
+                    print(f'v_s: {v_s} \nv_old: {self.teacher.state_values[state]}\nnew: {abs(v_s - self.teacher.state_values[state])}')
                     max_diff = max(max_diff, abs(v_s - self.teacher.state_values[state]))
                     self.teacher.state_values[state] = v_s
+
+                    counter+=1
+                    if counter > 100:
+                        break
                 
                 print('max_diff', max_diff)
                 if max_diff < self.teacher.delta:
-                    print('index: ', j)
+                    print('stop index: ', j)
                     break
 
             
             #Policy Improvement
-            # for state in self.teacher.state_values.keys():
-            #     val_max = self.teacher.state_values[state]
+            for state in self.teacher.state_values.keys():
+                action = self.teacher.policy[state]
 
-            #     for 
+                available_positions = self.available_positions(board)
+                a_list = np.zeroes(len(available_positions))
+
+                for k in range(len(a_list)):
+                    probability = 1
+                    # a_list[k] = 
+
 
         return
     
