@@ -45,8 +45,9 @@ class State:
         return 'X' if x_count <= o_count else 'O'
     
     def update_state(self, board, position, symbol):
-        board[position[0]][position[1]] = symbol
-        return board
+        board_copy = board.copy()
+        board_copy[position[0]][position[1]] = symbol
+        return board_copy
 
     def available_positions(self, board):
         available = []
@@ -167,28 +168,42 @@ class State:
                 print('policy', action)
 
                 for a in available_positions:
-                    print('action', a)
+                    # print('action', a)
                     symbol = self.get_symbol(board)
                     
                     #get new_state when taking action a
                     new_state = self.update_state(board, a, symbol)
+                    # print('new state', new_state)
                     reward = self.get_reward(new_state)
 
                     v_s = 0
                     probability = 1 #just for the sake of formality
                     #get the value of this particular state
-                    for move in self.available_positions(new_state):
-                        next_symbol = self.get_symbol(new_state)
+
+                    #this is not the correct loop, it is making an
+                    # XOX
+                    # OXO
+                    # XOX
+                    # instead of traversing through each possible next state
+                    new_available_positions = self.available_positions(new_state)
+                    new_symbol = 'X' if symbol == 'O' else 'O'
+                    for move in new_available_positions:
                         #update state to get next_state
-                        next_state = self.update_state(new_state, move, next_symbol)
+                        next_state = self.update_state(new_state, move, new_symbol)
                         next_hash = self.get_hash(next_state)
 
+                        # print('next state', next_state)
                         #check validity of state
                         if not self.is_valid_state(next_state):
                             continue
 
+                        # print('s_v of next hash', self.teacher.state_values[next_hash])
+                        # v_s += probability * self.teacher.state_values[next_hash]
                         v_s += probability * self.teacher.state_values[next_hash]
                     
+                    print('reward', reward)
+                    print('gamma', self.teacher.gamma)
+                    print('old v_s',v_s)
                     v_s = reward + (self.teacher.gamma*v_s)
                     print('v_s for action', v_s)
 
@@ -201,16 +216,17 @@ class State:
 
                 max_list = [index for index in a_list.keys() if a_list[index] == max_num]
                 max_action = random.choice(max_list)
-
+                
                 if action != max_action:
                     optimal_policy_found = False
                     self.teacher.policy[state] = max_action
-            
+                
+
             # If actions / policy did not change, algorithm terminates
             if optimal_policy_found:
                 break
         
-        self.teacher.save_policy('new_trained_policy_1.txt')
+        # self.teacher.save_policy('new_trained_policy_1.txt')
     
     def display_board(self):
         for i in range(BOARD_ROWS):
@@ -432,4 +448,4 @@ if __name__ == "__main__":
     game = State(teacher, student)
     # game.initialize_player_states()
     # game.teacher.save_states('new_states_test.txt')
-    game.play_game(max_policy_iter=10000, max_value_iter=10000)
+    game.play_game(max_policy_iter=100, max_value_iter=10000)
