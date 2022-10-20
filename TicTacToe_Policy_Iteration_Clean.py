@@ -106,9 +106,10 @@ class State:
                 for state in self.teacher.state_values.keys():
                     print('state', state)
                     board = self.get_board(state)
+                    board_hash = self.get_hash(board)
                     reward = self.get_reward(board) 
 
-                    v_s = 0
+                    v_s = self.teacher.state_values[board_hash]
                     probability = 1 #just for the sake of formality
                     for move in self.available_positions(board):
                         symbol = self.get_symbol(board)
