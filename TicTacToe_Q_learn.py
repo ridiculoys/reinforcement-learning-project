@@ -79,11 +79,11 @@ class State:
 
         while not self.isEndGame:
             if isX:
-                # move = self.player1.get_action(self.board, self.available_positions())
-                move = self.player1.get_action(self.available_positions())
+                move = self.player1.get_action(self.board, self.available_positions())
+                # move = self.player1.get_action(self.available_positions())
             else:
-                # move = self.player2.get_action(self.available_positions())
-                move = self.player2.get_action(self.board, self.available_positions())
+                move = self.player2.get_action(self.available_positions())
+                # move = self.player2.get_action(self.board, self.available_positions())
 
 
             self.update_state(move, isX)
@@ -303,7 +303,6 @@ class RandomPlayer:
         return action
     
     def get_action(self, available_positions):
-        #epsilon greedy
         action = random.choice(available_positions) ##action
         return action
     
@@ -335,14 +334,45 @@ class HumanPlayer:
     def game_begin(self):
         pass
 
+#policy_iteration
+class Teacher:
+    def __init__(self):
+        self.name = "policy"
+        self.policy = {}
+
+    def get_hash(self, board):
+        hash = str(board.reshape(BOARD_COLS * BOARD_ROWS))
+        return hash
+    
+    def get_action(self, board, available_positions):
+        hash = self.get_hash(board)
+
+        if hash in self.policy.keys():
+            return self.policy[hash]
+
+        return random.choice(available_positions)
+    
+    def updateQ(self, reward, state, available_positions):
+        pass
+
+    def game_begin(self):
+        pass
+
+    def load_policy(self, filename):
+        print("Initializing policy...")
+        print("Loading policy...")
+        fr = open(filename, 'rb')
+        self.policy = pickle.load(fr)
+        fr.close()
+        print("Successfully loaded policy!")
 
 if __name__ == "__main__":
     # random versus random
-    protagonist = RandomPlayer() #protagonist
-    antagonist = RandomPlayer() #antagonist, might have to have different functions for this one  
-    game = State(protagonist, antagonist)
-    game.display_board()
-    game.play_game(int(FILE_NUM))
+    # protagonist = RandomPlayer() #protagonist
+    # antagonist = RandomPlayer() #antagonist, might have to have different functions for this one  
+    # game = State(protagonist, antagonist)
+    # game.display_board()
+    # game.play_game(int(FILE_NUM))
 
     #Q-learn versus random
     # protagonist = QPlayer() #protagonist
@@ -376,7 +406,7 @@ if __name__ == "__main__":
     # game.display_board()
     # game.play_game(int(FILE_NUM))
 
-    # trained versus hooman
+    # trained Q versus hooman
     # protagonist = QPlayer(trained=True, epsilon=0)
     # protagonist.load_policy(f"against_random/new_q_student_policy_{FILE_NUM}")
     # protagonist.load_policy(f"player_2_save/q_student_policy_{FILE_NUM}")
@@ -386,3 +416,11 @@ if __name__ == "__main__":
     # game = State(hooman, protagonist)
     # game.display_board()
     # game.play_game_2()
+
+    # trained Q versus hooman
+    protagonist = Teacher()
+    protagonist.load_policy("teacher_trained_policy.txt")
+    hooman = HumanPlayer()
+    game = State(protagonist, hooman)
+    game.display_board()
+    game.play_game_2()
