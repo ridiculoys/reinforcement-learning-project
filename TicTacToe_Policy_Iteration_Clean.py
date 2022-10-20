@@ -5,7 +5,7 @@ import copy
 
 BOARD_ROWS = 3
 BOARD_COLS = 3
-FILE_NUM = ''
+FILE_NUM = 200
 
 class State:
     def __init__(self, teacher, student):
@@ -99,20 +99,14 @@ class State:
         self.teacher.load_player_states()
 
         for i in range(max_policy_iter):
-            optimal_policy_found = True
-
             #Policy Evaluation
             for j in range(max_value_iter):
-                print("current index: ", j)
                 max_diff = 0
 
-                counter = 0
                 for state in self.teacher.state_values.keys():
                     print('state', state)
-                    print('v_old: ', self.teacher.state_values[state])
-                    print('max_diff: ', max_diff)
                     board = self.get_board(state)
-                    reward = self.get_reward(board)
+                    reward = self.get_reward(board) 
 
                     v_s = 0
                     probability = 1 #just for the sake of formality
@@ -127,19 +121,18 @@ class State:
                             continue
 
                         v_s += probability * self.teacher.state_values[hash]
+                        # print(f'prob: 1\trew: {reward}\tgamma:{self.teacher.gamma}*{self.teacher.state_values[hash]}')
+                        # print(f'probability * (reward + {(self.teacher.gamma * self.teacher.state_values[hash])})')
+                        # v_s += probability * (reward + (self.teacher.gamma * self.teacher.state_values[hash]))
                     
                     v_s = reward + (self.teacher.gamma*v_s)
 
                     #get max of the current max diff and the difference between new v_s and the old v_s
-                    print(f'v_s: {v_s} \nv_old: {self.teacher.state_values[state]}\nnew: {abs(v_s - self.teacher.state_values[state])}')
+                    print(f'v_s: {v_s} \nv_old: {self.teacher.state_values[state]}\ndiff: {abs(v_s - self.teacher.state_values[state])}')
                     max_diff = max(max_diff, abs(v_s - self.teacher.state_values[state]))
                     self.teacher.state_values[state] = v_s
-
-                    counter+=1
-                    if counter > 100:
-                        break
                 
-                print('max_diff', max_diff)
+                # print('max_diff', max_diff)
                 if max_diff < self.teacher.delta:
                     print('stop index: ', j)
                     break
@@ -147,17 +140,18 @@ class State:
             
             #Policy Improvement
             print('policy improvement')
+            optimal_policy_found = True
             count = 0
             for state in self.teacher.state_values.keys():
                 board = self.get_board(state)
                 print('board\n', board)
-                available_positions = self.available_positions(board)
 
                 #skip states that are invalid
                 '''
                     1. Winning state - cant really evaluate
                     2. Full state
                 '''
+                available_positions = self.available_positions(board)
                 is_end_state = self.is_end_state(board, 'X') or self.is_end_state(board,'O')
                 if available_positions == [] or is_end_state:
                     continue
@@ -165,8 +159,8 @@ class State:
 
                 a_list = {}
                 action = self.teacher.policy[state]
-                print('policy', action)
 
+                reward = self.get_reward(board)
                 for a in available_positions:
                     # print('action', a)
                     symbol = self.get_symbol(board)
@@ -174,11 +168,9 @@ class State:
                     #get new_state when taking action a
                     new_state = self.update_state(board, a, symbol)
                     # print('new state', new_state)
-                    reward = self.get_reward(new_state)
 
                     v_s = 0
                     probability = 1 #just for the sake of formality
-                    #get the value of this particular state
 
                     #this is not the correct loop, it is making an
                     # XOX
@@ -201,32 +193,31 @@ class State:
                         # v_s += probability * self.teacher.state_values[next_hash]
                         v_s += probability * self.teacher.state_values[next_hash]
                     
-                    print('reward', reward)
-                    print('gamma', self.teacher.gamma)
-                    print('old v_s',v_s)
+                    #commenting out, try out the equation in the website first
                     v_s = reward + (self.teacher.gamma*v_s)
-                    print('v_s for action', v_s)
 
                     a_list[a] = v_s
 
                 #if there are multiple same elements, randomly get 1
                 max_num = max(a_list.values())
-                print('max', max_num)
-                print('a_list', a_list)
 
                 max_list = [index for index in a_list.keys() if a_list[index] == max_num]
                 max_action = random.choice(max_list)
                 
+                print('action', action)
                 if action != max_action:
+                    print("============I'm in============")
                     optimal_policy_found = False
                     self.teacher.policy[state] = max_action
-                
+                print('a_list', a_list)
+                print('max_action', max_action)
 
             # If actions / policy did not change, algorithm terminates
             if optimal_policy_found:
                 break
         
-        # self.teacher.save_policy('new_trained_policy_1.txt')
+        self.teacher.save_states(f'teacher_trained_states_{FILE_NUM}.txt')
+        self.teacher.save_policy(f'teacher_trained_policy_{FILE_NUM}.txt')
     
     def display_board(self):
         for i in range(BOARD_ROWS):
@@ -269,7 +260,7 @@ class State:
         self.state_index +=1
         print(self.state_index)
     
-    def is_valid_state(self, state):
+    def is_valid_state(self, state, init=False):
         #check if double win
         x_win = self.is_end_state(state, 'X') == 1
         o_win = self.is_end_state(state, 'O') == 1
@@ -277,9 +268,15 @@ class State:
             return False
 
         #check if hash exists
+        #during initialization of states for TTT, we do not include hash keys that already exist in the dict
+        #during policy evaluation, valid states are hash keys that exist
         hash_key = self.get_hash(state)
-        if hash_key in self.teacher.state_values:
-            return False
+        if not init:
+            if hash_key not in self.teacher.state_values:
+                return False
+        else:
+            if hash_key in self.teacher.state_values:
+                return False
 
         return True
 
@@ -304,7 +301,7 @@ class State:
                 new_state[move] = symbol
                 
                 #check validity of state
-                if not self.is_valid_state(new_state):
+                if not self.is_valid_state(new_state, init=True):
                     continue
 
                 #add valid state
@@ -370,7 +367,7 @@ class Teacher:
         index = 0
         for key in self.policy.keys():
             self.policy[key] = self.get_random_action(key)
-        self.save_policy('random_policy.txt')
+        self.save_policy(f'random_policy_{FILE_NUM}.txt')
     
     def is_end_state(self, board, symbol):
         for i in range(BOARD_ROWS):
@@ -427,10 +424,12 @@ class Teacher:
         fr.close()
 
         # #initialize random policy
-        # self.update_policy()
+        self.update_policy()
 
         #read existing random policy
-        self.load_policy('random_policy.txt')
+        # self.load_policy('random_policy.txt')
+
+
         print("Successfully loaded states and policy!")
 
 class QPlayer:
@@ -448,4 +447,4 @@ if __name__ == "__main__":
     game = State(teacher, student)
     # game.initialize_player_states()
     # game.teacher.save_states('new_states_test.txt')
-    game.play_game(max_policy_iter=100, max_value_iter=10000)
+    game.play_game(max_policy_iter=200, max_value_iter=200)
