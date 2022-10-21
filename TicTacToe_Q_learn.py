@@ -419,16 +419,16 @@ if __name__ == "__main__":
 
     # trained Q versus hooman
     teacher = Teacher()
-    teacher.load_policy("teacher_trained_policy.txt")
+    teacher.load_policy("teacher_trained_policy_500.txt")
     hooman = HumanPlayer()
     game = State(teacher, hooman)
     game.display_board()
     game.play_game_2()
 
     # random versus Q-learning trained
-    randomPlayer = RandomPlayer() #protagonist
-    trained_Q = QPlayer(trained=True, epsilon=0)
-    trained_Q.load_policy(f"player_2_save/q_student_policy_{FILE_NUM}")
-    game = State(randomPlayer, trained_Q)
-    game.display_board()
-    game.play_game(int(FILE_NUM))
+    # randomPlayer = RandomPlayer() #protagonist
+    # trained_Q = QPlayer(trained=True, epsilon=0)
+    # trained_Q.load_policy(f"player_2_save/q_student_policy_{FILE_NUM}")
+    # game = State(randomPlayer, trained_Q)
+    # game.display_board()
+    # game.play_game(int(FILE_NUM))
