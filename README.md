@@ -1,2 +1,4 @@
 # reinforcement-learning-project
-own tic tac toe implementation using q-learning
+
+Author: Louise Gabrielle Talip
+Description: Tic Tac Toe implementation and training agent via Q-Learning
